@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>خدمات محاضرات أونلاين</title>
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: #333;
+        }
+
+        .header {
+            background-color: #e6f7ff;
+            padding: 15px;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"],
+        input[type="tel"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .footer {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .service-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .explanation {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            text-align: right;
+        }
+
+        #forum-messages {
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        .forum-msg {
+            background-color: #f1f1f1;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+        }
+    </style>
+
+    <!-- مكتبة قراءة PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+
+    <!-- Firebase v9+ Modular SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, orderBy, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcKwuvefZI2vrkD4PQf8dHVAU0j6ArIRQ",
+            authDomain: "mohadrat-105f0.firebaseapp.com",
+            projectId: "mohadrat-105f0",
+            storageBucket: "mohadrat-105f0.appspot.com",
+            messagingSenderId: "1093242703624",
+            appId: "1:1093242703624:web:a486b6368f613843d466bd",
+            measurementId: "G-NYQZV9625D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let userName = '', userPhone = '';
+
+        window.startService = function () {
+            userName = document.getElementById('name').value.trim();
+            userPhone = document.getElementById('phone').value.trim();
+            if (!userName || !userPhone) {
+                alert('يرجى إدخال اسمك ورقم هاتفك!');
+                return;
+            }
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        window.selectService = function (service) {
+            const result = document.getElementById('result');
+            let message = '', price = 0;
+            if (service === 'assignment') {
+                message = 'حل اسيمنت';
+                price = 50;
+            } else if (service === 'project') {
+                message = 'تنفيذ مشروع';
+                price = 250;
+            }
+            const phoneNumber = '01012272487';
+            const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+                `مرحبًا، اسمي ${userName} ورقم هاتفي ${userPhone}. أريد ${message}.`
+            )}`;
+
+            result.classList.remove('hidden');
+            result.innerHTML = `
+        <p>سعر الخدمة: ${price} جنيه</p>
+        <p><a href="${whatsappLink}" target="_blank">اضغط هنا للتواصل على الواتساب</a></p>
+      `;
+        }
+
+        window.showPdfUpload = function () {
+            document.getElementById('pdf-upload').classList.remove('hidden');
+        }
+
+        window.uploadPdf = async function () {
+            const file = document.getElementById('pdfFile').files[0];
+            if (!file) return alert('يرجى اختيار ملف PDF!');
+            const reader = new FileReader();
+            reader.onload = async function (event) {
+                const typedArray = new Uint8Array(event.target.result);
+                try {
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    let text = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        content.items.forEach(item => text += item.str + ' ');
+                    }
+                    const summary = summarizeText(text);
+                    document.getElementById('explanation-container').innerHTML = `
+            <div class="explanation"><strong>شرح المحاضرة:</strong><br>${summary}</div>`;
+                } catch (err) {
+                    alert('حدث خطأ أثناء قراءة ملف PDF.');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function summarizeText(text) {
+            const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 0);
+            return sentences.slice(0, 3).join('. ') + '.';
+        }
+
+        window.showForum = function () {
+            document.getElementById('forum').classList.remove('hidden');
+            renderForum();
+        }
+
+        window.submitQuestion = async function () {
+            const q = document.getElementById('question').value.trim();
+            if (!q) return alert('اكتب سؤالك أولاً!');
+            try {
+                await addDoc(collection(db, "forumMessages"), {
+                    question: q,
+                    timestamp: serverTimestamp(),
+                });
+                document.getElementById('question').value = '';
+                renderForum();
+            } catch (error) {
+                console.error("خطأ في إضافة السؤال: ", error);
+            }
+        }
+
+        async function renderForum() {
+            const qSnap = await getDocs(query(collection(db, "forumMessages"), orderBy("timestamp", "asc")));
+            const forumDiv = document.getElementById('forum-messages');
+            forumDiv.innerHTML = '';
+            let index = 1;
+            qSnap.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = 'forum-msg';
+                div.textContent = `${index++}. ${doc.data().question}`;
+                forumDiv.appendChild(div);
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+    <div class="header">
+        <h2>صلوا على النبي ❤️</h2>
+    </div>
+
+    <div class="container">
+        <h1>مرحبا بك في خدمات محاضرات أونلاين!</h1>
+
+        <div id="step1">
+            <p>يرجى إدخال بياناتك:</p>
+            <input type="text" id="name" placeholder="اسمك" required />
+            <input type="tel" id="phone" placeholder="رقم هاتفك" required />
+            <button onclick="startService()">ابدأ الخدمة</button>
+        </div>
+
+        <div id="step2" class="hidden">
+            <p>اختر الخدمة التي تريدها:</p>
+            <div class="service-buttons">
+                <button onclick="selectService('assignment')">حل اسيمنت</button>
+                <button onclick="selectService('project')">تنفيذ مشروع</button>
+                <button onclick="showPdfUpload()">شرح المحاضرة</button>
+                <button onclick="showForum()">منتدى النقاش</button>
+            </div>
+        </div>
+
+        <div id="result" class="hidden"></div>
+
+        <div id="pdf-upload" class="hidden">
+            <p>ارفع ملف PDF الخاص بالمحاضرة:</p>
+            <input type="file" id="pdfFile" accept=".pdf" />
+            <button onclick="uploadPdf()">شرح المحاضرة</button>
+            <div id="explanation-container"></div>
+        </div>
+
+        <div id="forum" class="hidden">
+            <p>اكتب سؤالك هنا:</p>
+            <textarea id="question" rows="4" placeholder="اكتب سؤالك..."></textarea>
+            <button onclick="submitQuestion()">أرسل السؤال</button>
+            <div id="forum-messages"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        جميع الحقوق محفوظة &copy; خدمات محاضرات أونلاين
+    </div>
+
+</body>
+
+</html>
